@@ -6,6 +6,7 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node ./server/index.js",
     "dev": "cross-env NODE_ENV=development nodemon ./server/index.js",
+    "dev:test": "cross-env NODE_ENV=test nodemon ./server/index.js",
     "lint": "eslint . --fix",
     "test": "cross-env NODE_ENV=test jest --verbose "
   },
