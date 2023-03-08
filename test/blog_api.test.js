@@ -14,7 +14,7 @@ beforeAll(async () => {
     await blog.save()
   })
   await api.get('/api/blogs')
-}, 2000)
+})
 
 describe('Test server endpoints', () => {
   test('blogs are returned as json', async () => {
@@ -56,6 +56,21 @@ describe('Test server endpoints', () => {
       .send(blog)
       .expect(400)
 
+  })
+  test('Testing functionality to delete resources', async () => { 
+    const resBlogs = await api.get('/api/blogs')
+    await api
+      .delete(`/api/blogs/${resBlogs.body[0].id}`)
+      .expect(200)
+  })
+  test('Testing functionality to update resources', async () => { 
+    const resBlogs = await api.get('/api/blogs')
+    const respuesta = await api
+      .put(`/api/blogs/likes/${resBlogs.body[0].id}`)
+      .send(resBlogs.body[0])
+      .expect(200)
+    console.log(respuesta.body)
+    expect(respuesta.body.likes).toBe(resBlogs.body[0].likes + 1)
   })
 })
 
