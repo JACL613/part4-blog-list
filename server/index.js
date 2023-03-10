@@ -4,6 +4,7 @@ const express = require('express')
 const morgan = require('morgan')
 const app = express()
 const {routerBlog} = require('./controllers/blogs.routes')
+const {routerUser} = require('./controllers/users.routes')
 const cors = require('cors')
 
 // configuracion morgan token body 
@@ -15,6 +16,7 @@ app.use(cors())
 app.use(express.json())
 
 // Routes
+app.use('/api/users' , routerUser)
 app.use('/api/blogs' , routerBlog)
 
 const PORT = process.env.PORT
