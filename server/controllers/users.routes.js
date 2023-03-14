@@ -2,6 +2,11 @@ const routerUser = require('express').Router()
 const User = require('../../Databases/models/users.models')
 const bcrypt = require('bcrypt')
 
+routerUser.get('/', async (req, res) => {
+  const users = await User.find({})
+  res.json(users)
+})
+
 routerUser.post('/' , async (req,res) => {
   const {body} = req
   const saltRounds = 10 
@@ -16,10 +21,10 @@ routerUser.post('/' , async (req,res) => {
     passwordHash
   })
   const saveUser = await user.save()
-  console.log('saveUser: ' , saveUser)
-  if (saveUser) {
-    res.json(saveUser)
+  if (!saveUser) {
+    res.status(400)
   }
-  res.status(400)
+  res.json(saveUser).status(200)
 })
+
 module.exports = {routerUser}

@@ -1,49 +1,66 @@
 const routerBlog = require('express').Router()
-const {Blog} = require('../../Databases/models/blogs.models')
+const   Blog = require('../../Databases/models/blogs.models')
+const User = require('../../Databases/models/users.models')
+const jwt = require('jsonwebtoken')
+
+
+
 routerBlog.get('/',async (request, response) => {
   const respuesta = await Blog.find({})
-  if (respuesta) {
-    response.send(respuesta)
-  }else{
-    response.status(400)
+  if (!respuesta) {
+    response.status(400).end()
   }
-})
-routerBlog.post('/', async (req, res) => {
-  const {title , author,url, likes} = req.body
-
-  if (!title || !author || !url || !likes) {
-    res.status(400)
-  }
-  const blog = new Blog({title , author , url , likes})
+  response.send(respuesta).status(200)
   
-  const respuesta = await blog.save()
-  if (respuesta) {
-    res.send(respuesta)
-  }else{
-    res.status(400)
+})
+
+routerBlog.post('/', async (req, res) => {
+  const {title , author,url, likes , userId , token} = req.body
+  if (!token || token == undefined) {
+    console.log('no hay')
+    return res.status(401).json({ error: 'Unauthorized token missing or invalid' }).end()
   }
+  const decodedToken = jwt.verify(token, process.env.SECRET)
+  if (!token || !decodedToken.id) {
+    return res.status(401).json({ error: 'Unauthorized token missing or invalid' })
+  }
+  if (title && author && url && likes && userId ) {
+    const user = await User.findById(decodedToken.id)
+    const blog = new Blog({title , author , url , likes , user: user._id})
+    
+    const respuesta = await blog.save()
+    if (!respuesta) {
+      res.status(400).end()
+    }
+    user.blogs = user.blogs.concat(respuesta._id)
+    await user.save()
+    res.send(respuesta)
+    
+  }
+  res.status(400).end()
+
+  
   
 })
 
 routerBlog.delete('/:id' , async (req , res) => {
-  const {id} = req.params
-  console.log(id)
-  const respuesta = await Blog.findByIdAndDelete({_id:id})
-  if (respuesta) {
-    res.send(respuesta).status(200)
+ 
+  
+  const respuesta = await Blog.findByIdAndDelete({_id:req.params.id})
+  if (!respuesta) {
+    res.status(400).end()
   }
-  res.status(400)
+  res.send(respuesta).status(200)
 })
 routerBlog.put('/likes/:id', async (req ,  res) => {
   const {id} = req.params
   const {title , author ,url, likes} = req.body
   const respuesta = await Blog.findByIdAndUpdate({_id: id} , {title , author, url, likes: likes + 1})
-  console.log(respuesta)
-  if (respuesta) {
-    const comprobacion = await Blog.findById({_id:id})
-    res.send(comprobacion).status(200)
+  if (!respuesta) {
+    res.status(400).end()
   }
-  res.status(400)
+  const comprobacion = await Blog.findById({_id:id})
+  res.send(comprobacion).status(200)
 
 })
 

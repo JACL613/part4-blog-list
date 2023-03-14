@@ -1,24 +1,33 @@
 const bcrypt = require('bcrypt')
 const mongoose = require('mongoose')
-const supertest = require('supertest')
 const User = require('../Databases/models/users.models')
 const helper = require('../utils/list_helpers')
-const {app , server} = require('../server/index')
+const {api} = require('../utils/API_test')
+const { server} = require('../server/index')
 
-const api = supertest(app)
-
-jest.setTimeout(15000)
 
 describe('when there is initially one user in db', () => {
+
+  jest.setTimeout(15000)
+
   beforeAll(async () => {
     await User.deleteMany({})
-  
+
     const passwordHash = await bcrypt.hash('sekret', 10)
-    const user = new User({ username: 'root', passwordHash })
-  
+    const user = new User({ username: 'root', name: 'alex', passwordHash })
+
     await user.save()
   })
-  
+  test('Session Startup Test',async () => { 
+    const respuesta = await api
+      .post('/api/login')
+      .send({username: 'root' , password: 'sekret'})
+      .expect(200)
+    console.log(respuesta.body)
+    expect(respuesta.body.name).toContain('alex')
+    
+    
+  })
   test('creation succeeds with a fresh username', async () => {
     const usersAtStart = await helper.usersInDb()
   
@@ -44,7 +53,7 @@ describe('when there is initially one user in db', () => {
     const usersAtStart = await helper.usersInDb()
 
     const newUser = {
-      username: 'root',
+      username: 'mluukkai',
       name: 'Superuser',
       password: 'salainen',
     }
@@ -59,9 +68,11 @@ describe('when there is initially one user in db', () => {
     const usersAtEnd = await helper.usersInDb()
     expect(usersAtEnd).toHaveLength(usersAtStart.length)
   })
-})
 
-afterAll(async() => {
-  await mongoose.connection.close()
-  server.close()
-})
+
+
+  afterAll(async() => {
+    await server.close()
+    await mongoose.connection.close()
+  })
+}, 10000  )

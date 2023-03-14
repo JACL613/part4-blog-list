@@ -1,22 +1,33 @@
 const mongoose = require('mongoose')
-const supertest = require('supertest')
 const {blogs} = require('../utils/list_blogs')
-const { Blog } = require('../Databases/models/blogs.models')
-const {app , server} = require('../server/index')
+const  Blog  = require('../Databases/models/blogs.models')
+const  User  = require('../Databases/models/users.models')
+const {api} = require('../utils/API_test')
+const { server} = require('../server/index')
 
-const api = supertest(app)
-jest.setTimeout(100000)
 
-beforeAll(async () => {
-  await Blog.deleteMany({})
-  blogs.map(async (item) => {
-    const blog = new Blog({...item})
-    await blog.save()
-  })
-  await api.get('/api/blogs')
-})
+
 
 describe('Test server endpoints', () => {
+  jest.setTimeout(1600)
+  let user
+  let userForToken
+  beforeAll(async () => {
+    await Blog.deleteMany({})
+    user = await User.find({username: 'root'})
+    console.log(user)
+    blogs.map(async (item) => {
+      const blog = new Blog({...item , user: user[0]._id})
+      await blog.save()
+    })
+    await api.get('/api/blogs')
+
+    const login = await api
+      .post('/api/login')
+      .send({username: 'root' , password: 'sekret'})
+    userForToken = login.body
+  })
+
   test('blogs are returned as json', async () => {
     const respuesta = await api.get('/api/blogs')
       .expect(200)
@@ -34,13 +45,24 @@ describe('Test server endpoints', () => {
       author: 'Edsger W. Dijkstra',
       url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html',
       likes: 12,
+      userId: user[0]._id
     }
     await api
       .post('/api/blogs')
+      .set({ Authorization: `Bearer ${userForToken.token}` })
       .send(blog)
     const respuesta = await api.get('/api/blogs') 
     expect(respuesta.body).toHaveLength(blogs.length + 1)
 
+  })
+  test('bad request new blog without authorization', async () => { 
+    const respuesta =  await api
+      .post('/api/blogs')
+      .set({ Authorization: 'Bearer ' })
+      .send(blogs[1])
+      .expect(401)
+      .expect('Content-Type', /application\/json/)
+    expect(respuesta.body.error).toContain('Unauthorized ')
   })
   test('Checking Unique Likes Property', async () => {
     const response = await api.get('/api/blogs')
@@ -53,6 +75,7 @@ describe('Test server endpoints', () => {
     }
     await api
       .post('/api/blogs')
+      .set({ Authorization: `Bearer ${userForToken.token}` })   
       .send(blog)
       .expect(400)
 
@@ -61,6 +84,8 @@ describe('Test server endpoints', () => {
     const resBlogs = await api.get('/api/blogs')
     await api
       .delete(`/api/blogs/${resBlogs.body[0].id}`)
+      .set({Identification: resBlogs.body[0].id})
+      .set({ Authorization: `Bearer ${userForToken.token}` })
       .expect(200)
   })
   test('Testing functionality to update resources', async () => { 
@@ -72,10 +97,10 @@ describe('Test server endpoints', () => {
     console.log(respuesta.body)
     expect(respuesta.body.likes).toBe(resBlogs.body[0].likes + 1)
   })
-})
+  
+  afterAll( async() => {
+    await server.close()
+    await mongoose.connection.close()
+  })
+},)
 
-
-afterAll(() => {
-  mongoose.connection.close()
-  server.close()
-})

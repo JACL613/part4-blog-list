@@ -20,4 +20,4 @@ blogSchema.set('toJSON', {
   
 const Blog  = model('Blog', blogSchema)
 
-module.exports = {Blog}
+module.exports = Blog
